@@ -85,7 +85,7 @@ class get_Reward(object):
         graph_to_int = []
         graph_to_int2 = []
 
-        for i in range(self.maxlen):
+        for i in range(self.maxlen):#BTBT 以graph的邻接矩阵生成key,标识不同的graph,使得若对某graph计算过score则下次可以通过key直接拿到对应score,加快计算速度
             graph_batch[i][i] = 0
             tt = np.int32(graph_batch[i])
             graph_to_int.append(self.baseint * i + np.int(''.join([str(ad) for ad in tt]), 2))
@@ -93,14 +93,14 @@ class get_Reward(object):
 
         graph_batch_to_tuple = tuple(graph_to_int2)
 
-        if graph_batch_to_tuple in self.d:
+        if graph_batch_to_tuple in self.d:#BTBT 若之前计算过score,则获得之前计算的score并计算reward返回
             score_cyc = self.d[graph_batch_to_tuple]
             return self.penalized_score(score_cyc, lambda1, lambda2), score_cyc[0], score_cyc[1]
 
         RSS_ls = []
 
         for i in range(self.maxlen):
-            col = graph_batch[i]
+            col = graph_batch[i] #BTBT 拿到i行,里面每个col表示了对应var是该第i个var的因
             if graph_to_int[i] in self.d_RSS:
                 RSS_ls.append(self.d_RSS[graph_to_int[i]])
                 continue
@@ -112,14 +112,14 @@ class get_Reward(object):
 
             else:
                 cols_TrueFalse = col > 0.5
-                X_train = self.inputdata[:, cols_TrueFalse]
+                X_train = self.inputdata[:, cols_TrueFalse] #BTBT 用所有的因进行回归,计算第i个var这个果
                 y_train = self.inputdata[:, i]
                 y_err = self.calculate_yerr(X_train, y_train)
 
-            RSSi = np.sum(np.square(y_err))
+            RSSi = np.sum(np.square(y_err)) #BTBT 得到用所有因计算该var的残差
 
             # if the regresors include the true parents, GPR would result in very samll values, e.g., 10^-13
-            # so we add 1.0, which does not affect the monotoniticy of the score
+            # so we add 1.0, which does not affect the monotoniticy of the score #BTBT ??? 这是否表明用GPR回归更好?
             if self.reg_type == 'GPR':
                 RSSi += 1.0
 
@@ -134,12 +134,12 @@ class get_Reward(object):
                  + np.sum(graph_batch)*self.bic_penalty
 
         score = self.score_transform(BIC)
-        cycness = np.trace(matrix_exponential(np.array(graph_batch)))- self.maxlen
+        cycness = np.trace(matrix_exponential(np.array(graph_batch)))- self.maxlen #BTBT 论文公式4
         reward = score + lambda1*np.float(cycness>1e-5) + lambda2*cycness
             
         if self.l1_graph_reg > 0:
-            reward = reward + self.l1_grapha_reg * np.sum(graph_batch)
-            score = score + self.l1_grapha_reg * np.sum(graph_batch)
+            reward = reward + self.l1_graph_reg * np.sum(graph_batch)
+            score = score + self.l1_graph_reg * np.sum(graph_batch)
 
         self.d[graph_batch_to_tuple] = (score, cycness)
 
@@ -150,7 +150,7 @@ class get_Reward(object):
 
     #### helper
     
-    def score_transform(self, s):
+    def score_transform(self, s):#BTBT ??? 论文5.1节,算法1,但为啥这样做?
         return (s-self.sl)/(self.su-self.sl)*self.lambda1_upper
 
     def penalized_score(self, score_cyc, lambda1, lambda2):

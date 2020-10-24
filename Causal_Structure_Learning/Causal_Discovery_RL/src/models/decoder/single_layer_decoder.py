@@ -31,11 +31,12 @@ class SingleLayerDecoder(object):
             W_r = tf.get_variable('weights_right', [self.input_embed, self.decoder_hidden_dim], initializer=self.initializer)
             U = tf.get_variable('U', [self.decoder_hidden_dim], initializer=self.initializer)    # Aggregate across decoder hidden dim
 
-        dot_l = tf.einsum('ijk, kl->ijl', encoder_output, W_l)
+        dot_l = tf.einsum('ijk, kl->ijl', encoder_output, W_l)#BTBT 把encoder出来的output[batch_siz,var_siz,encode_hidden_dim]转成[batch_siz,var_siz,decode_hidden_dim]
         dot_r = tf.einsum('ijk, kl->ijl', encoder_output, W_r)
-
-        tiled_l = tf.tile(tf.expand_dims(dot_l, axis=2), (1, 1, self.max_length, 1))
-        tiled_r = tf.tile(tf.expand_dims(dot_r, axis=1), (1, self.max_length, 1, 1))
+        exp_l = tf.expand_dims(dot_l, axis=2) #BTBT [batch_siz,var_siz,1,decoder_hid] expand_dim中axis参数的意思是再那个维度插入(扩展)一维
+        exp_r = tf.expand_dims(dot_r, axis=1) #BTBT [batch_siz,1,var_siz,decoder_hid]
+        tiled_l = tf.tile(exp_l, (1, 1, self.max_length, 1))
+        tiled_r = tf.tile(exp_r, (1, self.max_length, 1, 1))
 
         if self.decoder_activation == 'tanh':    # Original implementation by paper
             final_sum = tf.nn.tanh(tiled_l + tiled_r)
@@ -46,7 +47,7 @@ class SingleLayerDecoder(object):
         else:
             raise NotImplementedError('Current decoder activation is not implemented yet')
 
-        # final_sum is of shape (batch_size, max_length, max_length, decoder_hidden_dim)
+        # final_sum is of shape (batch_size, max_length, max_length, decoder_hidden_dim) #BTBT [batch_siz,var_siz,var_siz,decoder_hid]
         logits = tf.einsum('ijkl, l->ijk', final_sum, U)    # Readability
 
         if self.bias_initial_value is None:    # Randomly initialize the learnable bias
@@ -54,7 +55,8 @@ class SingleLayerDecoder(object):
         elif self.use_bias_constant:    # Constant bias
             self.logit_bias =  tf.constant([self.bias_initial_value], tf.float32, name='logit_bias')
         else:    # Learnable bias with initial value
-            self.logit_bias =  tf.Variable([self.bias_initial_value], tf.float32, name='logit_bias')
+            if self.use_bias: #BTBT [BUGFIX] 使用bias时才初始化它
+                self.logit_bias =  tf.Variable([self.bias_initial_value], tf.float32, name='logit_bias')
 
         if self.use_bias:    # Bias to control sparsity/density
             logits += self.logit_bias
@@ -68,7 +70,7 @@ class SingleLayerDecoder(object):
             # Update mask
             self.mask = tf.one_hot(position, self.max_length)
 
-            masked_score = self.adj_prob[:,i,:] - 100000000.*self.mask
+            masked_score = self.adj_prob[:,i,:] - 100000000.*self.mask #BTBT avoid self-loop
             prob = distr.Bernoulli(masked_score)    # probs input probability, logit input log_probability
 
             sampled_arr = prob.sample()    # Batch_size, seqlenght for just one node

@@ -167,10 +167,10 @@ def main():
 
             input_batch = training_set.train_batch(actor.batch_size, actor.max_length, actor.input_dimension)
             graphs_feed = sess.run(actor.graphs, feed_dict={actor.input_: input_batch})
-            reward_feed = callreward.cal_rewards(graphs_feed, lambda1, lambda2)
+            reward_feed = callreward.cal_rewards(graphs_feed, lambda1, lambda2) #BTBT 得到生成的一个graph batch中每个graph的reward
 
             # max reward, max reward per batch
-            max_reward = -callreward.update_scores([max_reward_score_cyc], lambda1, lambda2)[0]
+            max_reward = -callreward.update_scores([max_reward_score_cyc], lambda1, lambda2)[0] #BTBT 每跑batch我们都会用更新后的lambda1/2对截至到目前找到的max_reward对应的max_reward_score_cyc再算一次rewaerd作为新的max_reward
             max_reward_batch = float('inf')
             max_reward_batch_score_cyc = (0, 0)
 
@@ -181,7 +181,7 @@ def main():
                         
             max_reward_batch = -max_reward_batch
 
-            if max_reward < max_reward_batch:
+            if max_reward < max_reward_batch:#BTBT 若该batch的所有graph中有一个reward大于max_reward,该reward就作为max_reward
                 max_reward = max_reward_batch
                 max_reward_score_cyc = max_reward_batch_score_cyc
 
@@ -195,9 +195,16 @@ def main():
             feed = {actor.input_: input_batch, actor.reward_: -reward_feed[:,0], actor.graphs_:graphs_feed}
 
             summary, base_op, score_test, probs, graph_batch, \
-                reward_batch, reward_avg_baseline, train_step1, train_step2 = sess.run([actor.merged, actor.base_op,
-                actor.test_scores, actor.log_softmax, actor.graph_batch, actor.reward_batch, actor.avg_baseline, actor.train_step1,
-                actor.train_step2], feed_dict=feed)
+                reward_batch, reward_avg_baseline, train_step1, train_step2 = sess.run([
+                    actor.merged, 
+                    actor.base_op,
+                    actor.test_scores, 
+                    actor.log_softmax, 
+                    actor.graph_batch, 
+                    actor.reward_batch, 
+                    actor.avg_baseline, 
+                    actor.train_step1,
+                    actor.train_step2], feed_dict=feed)
 
             if config.verbose:
                 _logger.info('Finish updating actor and critic network using reward calculated')
@@ -273,7 +280,7 @@ def main():
                              lambda1, lambda1_upper, lambda2, lambda2_upper, score_min, cyc_min))
                     
                 graph_batch = convert_graph_int_to_adj_mat(graph_int)
-
+                #BTBT ??? graph prune 怎么做?
                 if reg_type == 'LR':
                     graph_batch_pruned = np.array(graph_prunned_by_coef(graph_batch, training_set.inputdata))
                 elif reg_type == 'QR':
@@ -311,4 +318,21 @@ def main():
 
 
 if __name__ == '__main__':
+    cfg, _ = get_config()
+    #TODO configuration
     main()
+"""
+# exp1: RL-BIC2, assuming the equal noise variances
+cd src
+python main.py  --max_length 12 \
+                --data_size 5000 \
+                --score_type BIC \
+                --reg_type LR \
+                --read_data  \
+                --transpose \
+                --data_path input_data_path \
+                --lambda_flag_default \
+                --nb_epoch 20000 \
+                --input_dimension 64 \
+                --lambda_iter_num 1000
+"""

@@ -50,7 +50,7 @@ class Actor(object):
 
         # Tensor block holding the input sequences [Batch Size, Sequence Length, Features]
         self.input_ = tf.placeholder(tf.float32, [self.batch_size, self.max_length, self.input_dimension],
-                                     name="input_coordinates")
+                                     name="input_coordinates") #BTBT [batch_siz,var_siz,subsample_siz]
         self.reward_ = tf.placeholder(tf.float32, [self.batch_size], name='input_rewards')
         self.graphs_ = tf.placeholder(tf.float32, [self.batch_size, self.max_length, self.max_length], name='input_graphs')
 
@@ -84,9 +84,9 @@ class Actor(object):
 
             self.samples, self.scores, self.entropy = self.decoder.decode(self.encoder_output)
 
-            # self.samples is seq_lenthg * batch size * seq_length
+            # self.samples is seq_lenthg * batch size * seq_length #BTBT [var_siz,batch_siz,var_siz]
             # cal cross entropy loss * reward
-            graphs_gen = tf.transpose(tf.stack(self.samples), [1,0,2])
+            graphs_gen = tf.transpose(tf.stack(self.samples), [1,0,2])#BTBT [batch_siz,var_siz,var_siz]
 
             self.graphs = graphs_gen
             self.graph_batch = tf.reduce_mean(graphs_gen, axis=0)

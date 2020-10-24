@@ -91,11 +91,11 @@ class TransformerEncoder(object):
  
         self.is_training = is_train #not config.inference_mode
  
-    def encode(self, inputs):
+    def encode(self, inputs):#BTBT input 数据shape为 [batch_siz,var_siz,subsample_siz]
         with tf.variable_scope("embedding"):
           # Embed input sequence
           W_embed =tf.get_variable("weights",[1,self.input_dimension, self.input_embed], initializer=self.initializer)
-          self.embedded_input = tf.nn.conv1d(inputs, W_embed, 1, "VALID", name="embedded_input")
+          self.embedded_input = tf.nn.conv1d(inputs, W_embed, 1, "VALID", name="embedded_input")#BTBT 把input通过conv1d转为[batch_siz,var_siz,embed_dim]的嵌入向量
           # Batch Normalization
           self.enc = tf.layers.batch_normalization(self.embedded_input, axis=2, training=self.is_training, name='layer_norm', reuse=None)
         

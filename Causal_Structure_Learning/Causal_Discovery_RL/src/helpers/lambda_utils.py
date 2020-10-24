@@ -50,8 +50,8 @@ def BIC_input_graph(X, g, reg_type='LR', score_type='BIC'):
 def BIC_lambdas(X, gl=None, gu=None, gtrue=None, reg_type='LR', score_type='BIC'):
     """
     :param X: dataset
-    :param gl: input graph to get score lower bound
-    :param gu: input graph to get score upper bound
+    :param gl: input graph to get score lower bound #BTBT ???
+    :param gu: input graph to get score upper bound #BTBT ???
     :param gtrue: input true graph
     :param reg_type:
     :param score_type:
@@ -66,7 +66,7 @@ def BIC_lambdas(X, gl=None, gu=None, gtrue=None, reg_type='LR', score_type='BIC'
         bic_penalty = np.log(n) / n
     
     # default gl for BIC score: complete graph (except digonals)
-    if gl is None:
+    if gl is None: #BTBT ??? 用全连接图作为BIC下界,不完全正确吧,应该时真正的因果邻接矩阵(gture)才能拿到最低BIC阿(BIC越小说明因果图越能解析真实数据),但为何事实上真正的因果邻接矩阵的BIC比全连接图的BIC还要高?
         g_ones= np.ones((d,d))
         for i in range(d):
             g_ones[i, i] = 0
